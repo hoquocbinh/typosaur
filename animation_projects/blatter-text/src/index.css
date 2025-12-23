@@ -1,0 +1,80 @@
+:root {
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #0d0d0d;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  /* Premium gradient background */
+  background: radial-gradient(circle at 50% 50%, #1a1a1a 0%, #000000 100%);
+  overflow: hidden;
+  /* Prevent scrollbars during explosion */
+  cursor: crosshair;
+}
+
+.app-container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.content-wrapper {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 200px;
+  /* Reserve space for text */
+}
+
+.exploding-text-container {
+  grid-area: 1 / 1;
+  /* Stack all text in the same cell */
+  font-size: 5rem;
+  font-weight: 800;
+  text-align: center;
+  /* Stylish text gradient */
+  background: linear-gradient(135deg, #fff 0%, #a5a5a5 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  color: #ffffff;
+  /* Fallback */
+  text-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  user-select: none;
+  width: 100%;
+  /* Ensure centering works well */
+}
+
+.exploding-char {
+  /* Ensure gradient works on spans if we want it, or just keep it simple white */
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.instruction-text {
+  position: absolute;
+  bottom: -100px;
+  font-size: 0.9rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  opacity: 0.7;
+}

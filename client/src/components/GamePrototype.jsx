@@ -11,6 +11,7 @@ const GamePrototype = ({ onGameOver }) => {
     const [score, setScore] = useState(0);
     const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
     const [maxTime, setMaxTime] = useState(INITIAL_TIME);
+    const [wordHidden, setWordHidden] = useState(false);
 
     const timerRef = useRef(null);
 
@@ -35,7 +36,7 @@ const GamePrototype = ({ onGameOver }) => {
 
     useEffect(() => {
         if (timeLeft === 0) {
-            onGameOver(score);
+            spawnNewWord();
         }
     }, [timeLeft]);
 
@@ -54,15 +55,35 @@ const GamePrototype = ({ onGameOver }) => {
                 const next = prev + char;
                 if (currentWord.startsWith(next)) {
                     if (next === currentWord) {
+                        // HIDE the word immediately before animation
+                        setWordHidden(true);
+
                         // Trigger Phaser Animation
                         if (window.triggerPhaser) {
-                            window.triggerPhaser('TRIGGER_EAT');
+                            // Small delay to ensure DOM updates before reading positions
+                            setTimeout(() => {
+                                const charSpans = document.querySelectorAll('.word-display .char');
+                                const charPositions = Array.from(charSpans).map((span) => {
+                                    const rect = span.getBoundingClientRect();
+                                    return {
+                                        char: span.textContent,
+                                        x: rect.left + rect.width / 2,
+                                        y: rect.top + rect.height / 2
+                                    };
+                                });
+
+                                window.triggerPhaser('TRIGGER_EAT', {
+                                    word: currentWord,
+                                    charPositions: charPositions
+                                });
+                            }, 10);
                         }
 
                         setTimeout(() => {
                             setScore(s => s + 1);
                             spawnNewWord();
                             setInput('');
+                            setWordHidden(false); // Show word again
                         }, 200);
                         return next;
                     }
@@ -82,21 +103,27 @@ const GamePrototype = ({ onGameOver }) => {
         const randWord = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
         setCurrentWord(randWord);
         setInput('');
-        const newMaxTime = Math.max(1000, INITIAL_TIME - (score * 100));
+        setWordHidden(false);
+        const newMaxTime = Math.max(10000, INITIAL_TIME - (score * 100));
         setMaxTime(newMaxTime);
         setTimeLeft(newMaxTime);
     };
 
     return (
         <div className="game-container">
-            {/* Phaser background and character */}
             <PhaserGame />
 
-            {/* React UI Overlay */}
             <div className="score-board">SCORE: {score}</div>
 
             <div className="word-area">
-                <div className="word-display">
+                <div
+                    className="word-display"
+                    style={{
+                        background: "none",
+                        opacity: wordHidden ? 0 : 1,
+                        transition: 'opacity 0.1s'
+                    }}
+                >
                     {currentWord.split('').map((char, index) => (
                         <span key={index} className={`char ${index < input.length ? 'typed' : ''}`}>
                             {char}
@@ -115,7 +142,6 @@ const GamePrototype = ({ onGameOver }) => {
                 </div>
             </div>
 
-            {/* Control hints */}
             <div className="hotkeys-hint">TYPE THE WORD TO EAT!</div>
         </div>
     );

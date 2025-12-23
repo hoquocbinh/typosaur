@@ -7,18 +7,38 @@ export default class MainScene extends Phaser.Scene {
         this.ground = null;
         this.villain = null;
         this.isGameOver = false;
+        this.activeLetterTweens = [];
+        this.activeLetterTexts = [];
+
+        // Animation constants for easy tuning
+        this.LETTER_ANIMATION = {
+            BASE_EXPLOSION_DURATION: 700,
+            BASE_CONVERGE_DURATION: 1600,
+            FADE_OUT_DURATION: 300,
+            TIME_VARIATION: 0.3,
+            LETTER_DELAY: 30,
+            SCATTER_MIN: 350,
+            SCATTER_MAX: 700,
+            ROTATION_MIN: 180,
+            ROTATION_MAX: 360,
+            SCALE_EXPLOSION: 2.2,
+            SCALE_MIN: 0.5,
+            SCALE_FINAL: 0.3,
+            WOBBLE_AMPLITUDE: 15,
+            WOBBLE_FREQUENCY: 4,
+            DEPTH: 10000
+        };
     }
 
     preload() {
-        // Load the raw image (with white background)
-        this.load.image('cat_raw', '/assets/cat.png');
+        this.load.image('cat_raw', '/assets/cat_spritesheet.png');
         this.load.image('villain', '/villain.png');
     }
 
     create() {
         const { width, height } = this.scale;
 
-        // --- Process Texture to Remove White Background ---
+        // --- Process Texture to Remove Checkerboard Background ---
         if (!this.textures.exists('cat')) {
             const rawTexture = this.textures.get('cat_raw');
             const sourceImage = rawTexture.getSourceImage();
@@ -26,117 +46,150 @@ export default class MainScene extends Phaser.Scene {
             const canvas = document.createElement('canvas');
             canvas.width = sourceImage.width;
             canvas.height = sourceImage.height;
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
             ctx.drawImage(sourceImage, 0, 0);
 
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imageData.data;
 
-            // Simple heuristic: if pixel is close to white or grid grey
             for (let i = 0; i < data.length; i += 4) {
                 const r = data[i];
                 const g = data[i + 1];
                 const b = data[i + 2];
 
-                // Detect White (new cat) OR Checkerboard Greys
-                if ((r > 200 && g > 200 && b > 200) ||
-                    (Math.abs(r - g) < 20 && Math.abs(r - b) < 20 && r > 100)) {
+                const isColor = (r > g + 20) || (r > b + 20);
+                const isDark = r < 50 && g < 50 && b < 50;
+
+                if (!isColor && !isDark) {
                     data[i + 3] = 0;
                 }
             }
             ctx.putImageData(imageData, 0, 0);
 
-            // Add the processed texture to Phaser
             this.textures.addCanvas('cat', canvas);
 
-            // Manually add frames to the new 'cat' texture
-            const t = this.textures.get('cat');
-            // Dynamic frame width calculation (3 frames)
-            const fW = Math.floor(canvas.width / 3);
-            const fH = canvas.height;
+            const frameWidth = Math.floor(canvas.width / 5);
+            const frameHeight = Math.floor(canvas.height / 3);
 
-            t.add(0, 0, 0, 0, fW, fH);
-            t.add(1, 0, fW, 0, fW, fH);
-            t.add(2, 0, fW * 2, 0, fW, fH);
+            const t = this.textures.get('cat');
+            for (let i = 0; i < 5; i++) t.add(i, 0, i * frameWidth, 0, frameWidth, frameHeight);
+            for (let i = 0; i < 5; i++) t.add(i + 5, 0, i * frameWidth, frameHeight, frameWidth, frameHeight);
+            for (let i = 0; i < 5; i++) t.add(i + 10, 0, i * frameWidth, frameHeight * 2, frameWidth, frameHeight);
         }
 
-        // ------------------------------------------------
-
-        // 1. Background Villain (Giant and fading)
+        // 1. Background Villain
         this.villain = this.add.image(width / 2, height / 2, 'villain')
             .setOrigin(0.5)
             .setDisplaySize(width * 0.9, height * 0.9)
             .setAlpha(0.2);
 
-        // 2. Ground TileSprite for scrolling
+        // 2. Ground
         const groundGraphics = this.make.graphics({ x: 0, y: 0, add: false });
         groundGraphics.fillStyle(0xffffff);
         groundGraphics.fillRect(0, 0, 100, 4);
         groundGraphics.generateTexture('white_line', 100, 4);
         this.ground = this.add.tileSprite(0, height - 50, width, 4, 'white_line').setOrigin(0, 1);
 
-        // 3. Player Character
-        // Scale down significantly because source is huge (1024px height)
+        // 3. Player
         this.player = this.add.sprite(width * 0.15, height - 50, 'cat')
             .setOrigin(0.5, 1)
-            .setScale(0.2);
+            .setScale(2.5);
         this.player.setTint(0xffffff);
 
-        // 4. Create Animations
-        // New Sheet: 0, 1, 2 are running frames.
-        this.anims.create({
-            key: 'run',
-            frames: this.anims.generateFrameNumbers('cat', { frames: [0, 1, 2] }),
-            frameRate: 8,
-            repeat: -1
-        });
+        // 4. Animations
+        if (!this.anims.exists('run')) {
+            this.anims.create({
+                key: 'run',
+                frames: this.anims.generateFrameNumbers('cat', { start: 0, end: 4 }),
+                frameRate: 10,
+                repeat: -1
+            });
+        }
 
-        this.anims.create({
-            key: 'jump',
-            frames: [{ key: 'cat', frame: 1 }],
-            frameRate: 1
-        });
+        if (!this.anims.exists('jump')) {
+            this.anims.create({
+                key: 'jump',
+                frames: this.anims.generateFrameNumbers('cat', { start: 5, end: 9 }),
+                frameRate: 10,
+                repeat: 0
+            });
+        }
 
-        this.anims.create({
-            key: 'eat',
-            frames: [{ key: 'cat', frame: 0 }], // Reusing run frame for now
-            frameRate: 1
-        });
+        if (!this.anims.exists('eat')) {
+            this.anims.create({
+                key: 'eat',
+                frames: this.anims.generateFrameNumbers('cat', { start: 10, end: 14 }),
+                frameRate: 10,
+                repeat: 0
+            });
+        }
 
         this.player.play('run');
 
-        // 5. Communications from React
-        this.game.events.on('TRIGGER_EAT', () => this.handleEat());
+        // 5. Event Listeners
+        this.game.events.on('TRIGGER_EAT', (data) => this.handleEat(data));
         this.game.events.on('TRIGGER_JUMP', () => this.handleJump());
         this.game.events.on('SET_SPEED', (speed) => this.currentSpeed = speed);
 
-        // Initial background color
         this.cameras.main.setBackgroundColor('#f0f0f0');
     }
 
     changeBackgroundColor() {
-        const hue = Math.random(); // 0-1
-        // 0.7 Saturation, 0.9 Lightness (Pastel)
+        const hue = Math.random();
         const color = Phaser.Display.Color.HSLToColor(hue, 0.7, 0.9).color;
         this.cameras.main.setBackgroundColor(color);
     }
 
-    handleEat() {
-        if (this.isGameOver) return;
-
-        this.player.play('eat');
-
-        // Lunge forward
-        this.tweens.add({
-            targets: this.player,
-            x: this.scale.width * 0.3,
-            duration: 150,
-            yoyo: true,
-            ease: 'Power2',
-            onComplete: () => {
-                if (!this.isGameOver) this.player.play('run');
+    cleanupLetterAnimations() {
+        this.activeLetterTweens.forEach(tween => {
+            if (tween && tween.isPlaying && tween.isPlaying()) {
+                tween.stop();
             }
         });
+        this.activeLetterTweens = [];
+
+        this.activeLetterTexts.forEach(text => {
+            if (text && text.scene) {
+                text.destroy();
+            }
+        });
+        this.activeLetterTexts = [];
+    }
+
+    handleEat(data) {
+        if (this.isGameOver) return;
+
+        // Support both string and object payload
+        const word = (typeof data === 'string') ? data : data.word;
+        const charPositions = (typeof data === 'object' && data.charPositions) ? data.charPositions : [];
+
+        const centerFallbackX = this.scale.width / 2;
+        const centerFallbackY = this.scale.height / 2;
+
+        // Letter explosion animation
+        if (word && word.length > 0) {
+            const letters = word.split('');
+            const targetX = this.player.x;
+            const targetY = this.player.y - this.player.displayHeight / 3;
+            const config = this.LETTER_ANIMATION;
+            let maxTotalDuration = 0;
+
+
+
+            // Cat eat animation
+            // Ensure non-negative delay (maxTotalDuration is 0 when explosion is disabled)
+            const eatTriggerTime = maxTotalDuration > 0 ? Math.max(0, maxTotalDuration - 400) : 0;
+            this.time.delayedCall(eatTriggerTime, () => {
+                if (!this.isGameOver) {
+                    this.player.play('eat');
+                    this.player.once('animationcomplete', () => {
+                        if (!this.isGameOver && this.player.anims.currentAnim.key === 'eat') {
+                            this.player.play('run');
+                        }
+                    });
+                }
+            });
+        }
 
         // Flash villain
         this.tweens.add({
@@ -144,7 +197,11 @@ export default class MainScene extends Phaser.Scene {
             alpha: 0.6,
             duration: 100,
             yoyo: true,
-            onComplete: () => this.villain.setAlpha(0.2)
+            onComplete: () => {
+                if (this.villain) {
+                    this.villain.setAlpha(0.2);
+                }
+            }
         });
     }
 
@@ -167,8 +224,13 @@ export default class MainScene extends Phaser.Scene {
 
     update(time, delta) {
         if (this.isGameOver) return;
-
-        // Scroll ground
         this.ground.tilePositionX += 5;
+    }
+
+    shutdown() {
+        this.cleanupLetterAnimations();
+        this.game.events.off('TRIGGER_EAT');
+        this.game.events.off('TRIGGER_JUMP');
+        this.game.events.off('SET_SPEED');
     }
 }

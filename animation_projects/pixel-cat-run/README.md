@@ -1,16 +1,57 @@
-# React + Vite
+# Pixel Cat Run
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React + Vite based endless runner game using HTML5 Canvas.
 
-Currently, two official plugins are available:
+## Project Overview
+This project is an endless runner game where a pixel art cat runs, jumps over obstacles, and accumulates a score. The game logic is decoupled from the rendering loop for better performance and separation of concerns.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Technical Stack
+- **Framework**: React 19
+- **Build Tool**: Vite
+- **Language**: JavaScript (JSX)
+- **Styling**: CSS (Vanilla)
+- **Rendering**: HTML5 Canvas API
 
-## React Compiler
+## Directory Structure
+```
+src/
+├── components/
+│   └── GameCanvas.jsx    # Main component handling the Canvas rendering loop and input
+├── hooks/
+│   └── useGameLogic.js   # Custom hook containing all game physics, state management, and collision logic
+├── App.jsx               # Root component
+└── main.jsx             # Entry point
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Core Components & Logic
 
-## Expanding the ESLint configuration
+### `src/components/GameCanvas.jsx`
+- **Responsibility**: Handles the visual layer.
+- **Key Features**:
+    - **Render Loop**: Uses `requestAnimationFrame` to draw the game state (Cat, Obstacles, Background) onto the `<canvas>`.
+    - **Asset Loading**: Loads images (`cat.png`, `obstacle.png`) and processes them (e.g., removing backgrounds) before the game starts.
+    - **Input Handling**: Listens for 'Space' or 'ArrowUp' to trigger jump actions.
+    - **Responsive Design**: Auto-resizes the canvas to full screen on window resize.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### `src/hooks/useGameLogic.js`
+- **Responsibility**: Handles the "Business Logic" / Physics.
+- **Key State/Refs**:
+    - `gameState`: 'START', 'PLAYING', 'GAME_OVER'.
+    - `catRef`: Stores the cat's position (`x`, `y`), velocity, and dimensions.
+    - `obstaclesRef`: Array of current obstacle objects.
+    - `speedRef`: Current game speed (increases over time).
+    - `scoreRef`: Current score (based on distance/time).
+- **Key Functions**:
+    - `update(time)`: The main game tick. Updates physics (gravity), moves obstacles, spawns new ones, and checks collisions.
+    - `jump()`: Applies negative vertical velocity to the cat.
+    - `resetGame()`: Resets all refs and state to initial values.
+
+## Game Mechanics
+1.  **Gravity**: Constant downward force applied to the cat's `velocity`.
+2.  **Jumping**: Instant upward velocity change when on the ground.
+3.  **Spawning**: Obstacles spawn at the right edge of the screen at intervals determined by current speed.
+4.  **Collision**: AABB (Axis-Aligned Bounding Box) collision detection between the Cat and Obstacles with a small padding allowance.
+
+## running Locally
+1.  Install dependencies: `npm install`
+2.  Start dev server: `npm run dev`

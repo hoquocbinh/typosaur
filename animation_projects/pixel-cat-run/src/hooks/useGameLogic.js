@@ -23,6 +23,7 @@ export const useGameLogic = (canvasRef) => {
         height: 200, // INCREASED SIZE
         velocity: 0,
         isJumping: false,
+        isEating: false,
         groundY: 0,
     });
 
@@ -64,6 +65,16 @@ export const useGameLogic = (canvasRef) => {
         }
     }, []);
 
+    const eat = useCallback(() => {
+        if (!catRef.current.isEating) {
+            catRef.current.isEating = true;
+            // Brief cooldown/duration for the eat action
+            setTimeout(() => {
+                if (catRef.current) catRef.current.isEating = false;
+            }, 500);
+        }
+    }, []);
+
     const update = useCallback((time) => {
         if (gameState !== 'PLAYING') return;
 
@@ -101,8 +112,8 @@ export const useGameLogic = (canvasRef) => {
 
         // 3. Collision Detection
         const cat = catRef.current;
-        // Simple AABB collision
-        const collision = obstaclesRef.current.some(obs => {
+        // Find specific collision
+        const collidedIndex = obstaclesRef.current.findIndex(obs => {
             const padding = 20; // Hitbox padding (increased for bigger cat)
             return (
                 cat.x < obs.x + obs.width - padding &&
@@ -112,10 +123,17 @@ export const useGameLogic = (canvasRef) => {
             );
         });
 
-        if (collision) {
-            setGameState('GAME_OVER');
-            if (scoreRef.current > highScore) {
-                setHighScore(Math.floor(scoreRef.current));
+        if (collidedIndex !== -1) {
+            if (cat.isEating) {
+                // EAT THE OBSTACLE
+                obstaclesRef.current.splice(collidedIndex, 1);
+                scoreRef.current += 50; // Bonus points!
+                setScore(Math.floor(scoreRef.current));
+            } else {
+                setGameState('GAME_OVER');
+                if (scoreRef.current > highScore) {
+                    setHighScore(Math.floor(scoreRef.current));
+                }
             }
         }
 
@@ -151,7 +169,9 @@ export const useGameLogic = (canvasRef) => {
         score,
         highScore,
         resetGame,
+        resetGame,
         jump,
+        eat,
         catRef,
         obstaclesRef,
         speedRef,

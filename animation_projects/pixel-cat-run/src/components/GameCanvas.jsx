@@ -14,11 +14,12 @@ const GameCanvas = () => {
         catRef,
         obstaclesRef,
         speedRef,
-        backgroundColorRef
+        backgroundColorRef,
+        eat
     } = useGameLogic(canvasRef);
 
     const [imagesLoaded, setImagesLoaded] = useState(false);
-    const catImageRef = useRef(null);
+    const spriteSheetRef = useRef(null);
     const obstacleImageRef = useRef(null);
     const frameRef = useRef(0);
 
@@ -61,9 +62,16 @@ const GameCanvas = () => {
             const g = data[i + 1];
             const b = data[i + 2];
 
-            // Detect White (new cat) OR Checkerboard Greys
-            if ((r > 200 && g > 200 && b > 200) ||
-                (Math.abs(r - g) < 20 && Math.abs(r - b) < 20 && r > 100)) {
+            // Detect White (new cat) OR Checkerboard Greys OR Green Screen
+            // "Grey" is when R, G, B are similar.
+            // But we must NOT remove Black (0,0,0) or very dark outlines.
+            // Let's protect anything where R < 30 (Dark).
+
+            const isGrey = Math.abs(r - g) < 30 && Math.abs(r - b) < 30 && r > 40;
+            const isWhite = r > 200 && g > 200 && b > 200;
+            const isGreenScreen = g > r + 40 && g > b + 40;
+
+            if (isWhite || isGrey || isGreenScreen) {
                 data[i + 3] = 0;
             }
         }
@@ -75,24 +83,25 @@ const GameCanvas = () => {
 
     // Load Assets
     useEffect(() => {
-        const catImg = new Image();
-        catImg.src = '/assets/cat.png';
+        const sheetImg = new Image();
+        sheetImg.src = '/assets/cat_spritesheet.png';
 
         const obsImg = new Image();
         obsImg.src = '/assets/obstacle.png';
 
         let loadedCount = 0;
+        const totalImages = 2;
         const checkLoad = () => {
             loadedCount++;
-            if (loadedCount === 2) {
+            if (loadedCount === totalImages) {
                 // Process images to remove background
-                catImageRef.current = getTransparentImage(catImg);
+                spriteSheetRef.current = getTransparentImage(sheetImg);
                 obstacleImageRef.current = getTransparentImage(obsImg);
                 setImagesLoaded(true);
             }
         };
 
-        catImg.onload = checkLoad;
+        sheetImg.onload = checkLoad;
         obsImg.onload = checkLoad;
     }, []);
 
@@ -105,6 +114,8 @@ const GameCanvas = () => {
                 } else if (gameState !== 'PLAYING') {
                     resetGame();
                 }
+            } else if ((e.code === 'ArrowDown' || e.code === 'KeyE') && gameState === 'PLAYING') {
+                eat();
             }
         };
 
@@ -148,30 +159,33 @@ const GameCanvas = () => {
 
             // Draw Cat
             const cat = catRef.current;
-            if (catImageRef.current) {
-                const spriteW = catImageRef.current.width / 3;
-                const spriteH = catImageRef.current.height;
+            if (spriteSheetRef.current) {
+                // Sprite Sheet Logic
+                // 5 Columns, 3 Rows (Run, Jump, Eat)
+                const totalCols = 5;
+                const totalRows = 3;
+                const spriteW = spriteSheetRef.current.width / totalCols;
+                const spriteH = spriteSheetRef.current.height / totalRows;
 
-                let col = 0;
-
-                // Animation tick - FASTER ANIMATION (Divisor 12)
-                frameRef.current++;
-                const slowFrame = Math.floor(frameRef.current / 12) % 3;
-
-                if (gameState === 'PLAYING') {
-                    // Running
-                    col = slowFrame;
-                    // If jumping, freeze on frame 1 (or 2)
-                    if (cat.isJumping) col = 1;
-                } else {
-                    // IDLE
-                    col = 0;
+                let row = 0; // Default Run
+                if (cat.isEating) {
+                    row = 2; // Eat (Row 3, index 2)
+                } else if (cat.isJumping) {
+                    row = 1; // Jump (Row 2, index 1)
                 }
 
+                // Animation tick
+                frameRef.current++;
+                const frameSpeed = 8; // Adjust for smoothness
+                const col = Math.floor(frameRef.current / frameSpeed) % totalCols;
+
+                // Source Y based on Row
+                const sy = row * spriteH;
+
                 ctx.drawImage(
-                    catImageRef.current,
-                    col * spriteW, 0, spriteW, spriteH, // Source
-                    cat.x, cat.y, cat.width, cat.height // Dest
+                    spriteSheetRef.current,
+                    col * spriteW, sy, spriteW, spriteH, // Source (x, y, w, h)
+                    cat.x, cat.y, cat.width, cat.height // Dest (x, y, w, h)
                 );
 
             } else {

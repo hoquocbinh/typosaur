@@ -6,7 +6,7 @@ function App() {
     <div className="app">
       <h1>Pixel Cat Runner</h1>
       <GameCanvas />
-      <p className="instructions">Space or Click to Jump</p>
+      <p className="instructions">Space to Jump | 'E' to Eat</p>
     </div>
   );
 }
