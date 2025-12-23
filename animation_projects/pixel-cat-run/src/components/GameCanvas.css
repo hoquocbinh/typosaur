@@ -1,0 +1,70 @@
+.game-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    border: none;
+    background-color: #f0f0f0;
+    font-family: 'Press Start 2P', monospace, sans-serif;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.game-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    /* Let clicks pass to container */
+}
+
+.score-board {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 20px;
+    color: #535353;
+    display: flex;
+    gap: 20px;
+}
+
+.center-msg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: #535353;
+}
+
+.center-msg p {
+    margin: 10px 0;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.sub-text {
+    font-size: 14px !important;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+}

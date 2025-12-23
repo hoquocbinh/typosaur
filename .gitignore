@@ -1,0 +1,19 @@
+# Basics
+.DS_Store
+Thumbs.db
+*.log
+
+# Node
+node_modules/
+dist/
+build/
+.env
+.env.local
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.generated.cs
