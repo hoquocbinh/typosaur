@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { AnimatePresence } from 'framer-motion';
+import ExplodingText from './ExplodingText';
 import PhaserGame from './PhaserGame';
 
 const WORD_LIST = ["react", "phaser", "gaming", "pixel", "retro", "logic", "coding", "javascript", "developer", "browser", "engine", "sprite", "physics", "canvas", "webgl"];
@@ -12,8 +14,27 @@ const GamePrototype = ({ onGameOver }) => {
     const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
     const [maxTime, setMaxTime] = useState(INITIAL_TIME);
     const [wordHidden, setWordHidden] = useState(false);
+    const [targetPos, setTargetPos] = useState({ x: 0, y: 0 });
 
     const timerRef = useRef(null);
+
+    // Calculate Cat Position for explosion target
+    useEffect(() => {
+        const updateCatPos = () => {
+            // Logic from MainScene: x = width * 0.15, y = height - 50 (anchor 0.5, 1)
+            // Cat mouth is roughly 1/3 up from bottom of sprite? 
+            // Sprite is scaled 2.5. Original height ~32px? 
+            // Let's approximate: 100px up from bottom
+            setTargetPos({
+                x: window.innerWidth * 0.15,
+                y: window.innerHeight - 100
+            });
+        };
+
+        updateCatPos();
+        window.addEventListener('resize', updateCatPos);
+        return () => window.removeEventListener('resize', updateCatPos);
+    }, []);
 
     useEffect(() => {
         spawnNewWord();
@@ -62,7 +83,7 @@ const GamePrototype = ({ onGameOver }) => {
                         if (window.triggerPhaser) {
                             // Small delay to ensure DOM updates before reading positions
                             setTimeout(() => {
-                                const charSpans = document.querySelectorAll('.word-display .char');
+                                const charSpans = document.querySelectorAll('.word-display .exploding-char');
                                 const charPositions = Array.from(charSpans).map((span) => {
                                     const rect = span.getBoundingClientRect();
                                     return {
@@ -116,19 +137,17 @@ const GamePrototype = ({ onGameOver }) => {
             <div className="score-board">SCORE: {score}</div>
 
             <div className="word-area">
-                <div
-                    className="word-display"
-                    style={{
-                        background: "none",
-                        opacity: wordHidden ? 0 : 1,
-                        transition: 'opacity 0.1s'
-                    }}
-                >
-                    {currentWord.split('').map((char, index) => (
-                        <span key={index} className={`char ${index < input.length ? 'typed' : ''}`}>
-                            {char}
-                        </span>
-                    ))}
+                <div className="word-display" style={{ background: "none" }}>
+                    <AnimatePresence mode="popLayout">
+                        {!wordHidden && (
+                            <ExplodingText
+                                key={currentWord}
+                                text={currentWord}
+                                targetPos={targetPos}
+                                typedLength={input.length}
+                            />
+                        )}
+                    </AnimatePresence>
                 </div>
 
                 <div className="timer-bar-container">
