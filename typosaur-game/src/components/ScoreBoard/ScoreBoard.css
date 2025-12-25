@@ -1,0 +1,12 @@
+.score-board {
+    position: absolute;
+    top: 5vh;
+    right: 5vw;
+    font-size: 3rem;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 10px 30px;
+    border: 4px solid #fff;
+    text-shadow: 0 0 10px #fff;
+    z-index: 30;
+    pointer-events: auto;
+}

@@ -1,0 +1,14 @@
+.timer-bar-container {
+    width: 60vw;
+    height: 30px;
+    background: #222;
+    border-radius: 15px;
+    overflow: hidden;
+    border: 3px solid #fff;
+    pointer-events: auto;
+}
+
+.timer-bar {
+    height: 100%;
+    transition: width 0.1s linear, background-color 0.3s;
+}
